@@ -8,7 +8,13 @@ var abstractConnector = require('@web3-react/abstract-connector');
 var Web3ProviderEngine = _interopDefault(require('web3-provider-engine'));
 var CacheSubprovider = _interopDefault(require('web3-provider-engine/subproviders/cache.js'));
 var rpc_subprovider = require('@0x/subproviders/lib/src/subproviders/rpc_subprovider');
-var subprovider = require('subprovider');
+var base_wallet_subprovider = require('@0x/subproviders/lib/src/subproviders/base_wallet_subprovider');
+var ethereumjsTx = require('ethereumjs-tx');
+var types = require('@0x/subproviders/lib/src/types');
+var ethereumjsUtil = require('ethereumjs-util');
+var AppEth = _interopDefault(require('@ledgerhq/hw-app-eth'));
+var TransportHID = _interopDefault(require('@ledgerhq/hw-transport-webhid'));
+var TransportU2F = _interopDefault(require('@ledgerhq/hw-transport-u2f'));
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
   try {
@@ -829,6 +835,362 @@ if (hadRuntime) {
   }
 }
 
+var getTransport = function getTransport() {
+  // web hid supported
+  if ("hid" in navigator) {
+    return TransportHID.create();
+  } // try U2F
+
+
+  return TransportU2F.create();
+};
+/**
+ * Subprovider for interfacing with a user's [Ledger Nano S](https://www.ledgerwallet.com/products/ledger-nano-s).
+ * This subprovider intercepts all account related RPC requests (e.g message/transaction signing, etc...) and
+ * re-routes them to a Ledger device plugged into the users computer.
+ */
+
+
+var LedgerSubprovider = /*#__PURE__*/function (_BaseWalletSubprovide) {
+  _inheritsLoose(LedgerSubprovider, _BaseWalletSubprovide);
+
+  /**
+   * Instantiates a LedgerSubprovider. Defaults to derivationPath set to `44'/60'/x'`.
+   * TestRPC/Ganache defaults to `m/44'/60'/x'/0`, so set this in the configs if desired.
+   * @param config Several available configurations
+   * @return LedgerSubprovider instance
+   */
+  function LedgerSubprovider(_ref) {
+    var _this;
+
+    var networkId = _ref.networkId,
+        baseDerivationPath = _ref.baseDerivationPath;
+    _this = _BaseWalletSubprovide.call(this) || this;
+    _this.selectedAccountIndex = 0;
+    _this._networkId = networkId;
+    _this._baseDerivationPath = baseDerivationPath || "m/44'/60'/x'/0";
+    return _this;
+  }
+  /**
+   * Retrieve the set derivation path
+   * @returns derivation path
+   */
+
+
+  var _proto = LedgerSubprovider.prototype;
+
+  _proto.getPath = function getPath() {
+    return this._baseDerivationPath;
+  }
+  /**
+   * Set a desired derivation path when computing the available user addresses
+   * @param basDerivationPath The desired derivation path (e.g `44'/60'/0'`)
+   */
+  ;
+
+  _proto.setPath = function setPath(basDerivationPath) {
+    this._baseDerivationPath = basDerivationPath;
+  }
+  /**
+   * Retrieve a users Ledger accounts. The accounts are derived from the derivationPath,
+   * master public key and chain code. Because of this, you can request as many accounts
+   * as you wish and it only requires a single request to the Ledger device. This method
+   * is automatically called when issuing a `eth_accounts` JSON RPC request via your providerEngine
+   * instance.
+   * @param numberOfAccounts Number of accounts to retrieve (default: 10)
+   * @param from
+   * @return An array of accounts
+   */
+  ;
+
+  _proto.getAccountsAsync =
+  /*#__PURE__*/
+  function () {
+    var _getAccountsAsync = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/runtimeModule.mark(function _callee(numberOfAccounts, from) {
+      var addresses, transport, eth, i, path, info;
+      return runtimeModule.wrap(function _callee$(_context) {
+        while (1) {
+          switch (_context.prev = _context.next) {
+            case 0:
+              if (numberOfAccounts === void 0) {
+                numberOfAccounts = 10;
+              }
+
+              if (from === void 0) {
+                from = 0;
+              }
+
+              addresses = [];
+              _context.next = 5;
+              return getTransport();
+
+            case 5:
+              transport = _context.sent;
+              _context.prev = 6;
+              eth = new AppEth(transport);
+              i = from;
+
+            case 9:
+              if (!(i < from + numberOfAccounts)) {
+                _context.next = 18;
+                break;
+              }
+
+              path = this._baseDerivationPath.replace("x", String(i));
+              _context.next = 13;
+              return eth.getAddress(path, false, true);
+
+            case 13:
+              info = _context.sent;
+              addresses.push(info.address);
+
+            case 15:
+              i++;
+              _context.next = 9;
+              break;
+
+            case 18:
+              _context.next = 23;
+              break;
+
+            case 20:
+              _context.prev = 20;
+              _context.t0 = _context["catch"](6);
+              console.log(_context.t0);
+
+            case 23:
+              _context.prev = 23;
+              _context.next = 26;
+              return transport.close();
+
+            case 26:
+              return _context.finish(23);
+
+            case 27:
+              return _context.abrupt("return", addresses);
+
+            case 28:
+            case "end":
+              return _context.stop();
+          }
+        }
+      }, _callee, this, [[6, 20, 23, 27]]);
+    }));
+
+    function getAccountsAsync(_x, _x2) {
+      return _getAccountsAsync.apply(this, arguments);
+    }
+
+    return getAccountsAsync;
+  }()
+  /**
+   * Signs a transaction on the Ledger with the account specificed by the `from` field in txParams.
+   * If you've added the LedgerSubprovider to your app's provider, you can simply send an `eth_sendTransaction`
+   * JSON RPC request, and this method will be called auto-magically. If you are not using this via a ProviderEngine
+   * instance, you can call it directly.
+   * @param txParams Parameters of the transaction to sign
+   * @return Signed transaction hex string
+   */
+  ;
+
+  _proto.signTransactionAsync =
+  /*#__PURE__*/
+  function () {
+    var _signTransactionAsync = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/runtimeModule.mark(function _callee2(txParams) {
+      var path, transport, eth, tx, result, signedChainId, validChainId;
+      return runtimeModule.wrap(function _callee2$(_context2) {
+        while (1) {
+          switch (_context2.prev = _context2.next) {
+            case 0:
+              path = this._baseDerivationPath.replace("x", this.selectedAccountIndex.toString());
+
+              if (path) {
+                _context2.next = 3;
+                break;
+              }
+
+              throw new Error("address unknown '" + txParams.from + "'");
+
+            case 3:
+              _context2.next = 5;
+              return getTransport();
+
+            case 5:
+              transport = _context2.sent;
+              _context2.prev = 6;
+              eth = new AppEth(transport);
+              tx = new ethereumjsTx.Transaction(txParams, {
+                chain: this._networkId
+              }); // Set the EIP155 bits
+
+              tx.raw[6] = Buffer.from([this._networkId]); // v
+
+              tx.raw[7] = Buffer.from([]); // r
+
+              tx.raw[8] = Buffer.from([]); // s
+              // Pass hex-rlp to ledger for signing
+
+              _context2.next = 14;
+              return eth.signTransaction(path, tx.serialize().toString("hex"));
+
+            case 14:
+              result = _context2.sent;
+              // Store signature in transaction
+              tx.v = Buffer.from(result.v, "hex");
+              tx.r = Buffer.from(result.r, "hex");
+              tx.s = Buffer.from(result.s, "hex"); // EIP155: v should be chain_id * 2 + {35, 36}
+
+              signedChainId = Math.floor((tx.v[0] - 35) / 2);
+              validChainId = this._networkId & 0xff; // FIXME this is to fixed a current workaround that app don't support > 0xff
+
+              if (!(signedChainId !== validChainId)) {
+                _context2.next = 22;
+                break;
+              }
+
+              throw LedgerSubprovider.makeError("Invalid networkId signature returned. Expected: " + this._networkId + ", Got: " + signedChainId, "InvalidNetworkId");
+
+            case 22:
+              return _context2.abrupt("return", "0x" + tx.serialize().toString("hex"));
+
+            case 23:
+              _context2.prev = 23;
+              _context2.next = 26;
+              return transport.close();
+
+            case 26:
+              return _context2.finish(23);
+
+            case 27:
+            case "end":
+              return _context2.stop();
+          }
+        }
+      }, _callee2, this, [[6,, 23, 27]]);
+    }));
+
+    function signTransactionAsync(_x3) {
+      return _signTransactionAsync.apply(this, arguments);
+    }
+
+    return signTransactionAsync;
+  }();
+
+  LedgerSubprovider.makeError = function makeError(msg, id) {
+    var err = new Error(msg); // @ts-ignore
+
+    err.id = id;
+    return err;
+  }
+  /**
+   * Sign a personal Ethereum signed message. The signing account will be the account
+   * associated with the provided address.
+   * The Ledger adds the Ethereum signed message prefix on-device.  If you've added
+   * the LedgerSubprovider to your app's provider, you can simply send an `eth_sign`
+   * or `personal_sign` JSON RPC request, and this method will be called auto-magically.
+   * If you are not using this via a ProviderEngine instance, you can call it directly.
+   * @param data Hex string message to sign
+   * @param address Address of the account to sign with
+   * @return Signature hex string (order: rsv)
+   */
+  ;
+
+  _proto.signPersonalMessageAsync =
+  /*#__PURE__*/
+  function () {
+    var _signPersonalMessageAsync = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/runtimeModule.mark(function _callee3(data, address) {
+      var path, transport, eth, result, v, vHex;
+      return runtimeModule.wrap(function _callee3$(_context3) {
+        while (1) {
+          switch (_context3.prev = _context3.next) {
+            case 0:
+              path = this._baseDerivationPath.replace("x", this.selectedAccountIndex.toString());
+
+              if (path) {
+                _context3.next = 3;
+                break;
+              }
+
+              throw new Error("address unknown '" + address + "'");
+
+            case 3:
+              _context3.next = 5;
+              return getTransport();
+
+            case 5:
+              transport = _context3.sent;
+              _context3.prev = 6;
+              eth = new AppEth(transport);
+              _context3.next = 10;
+              return eth.signPersonalMessage(path, ethereumjsUtil.stripHexPrefix(data));
+
+            case 10:
+              result = _context3.sent;
+              v = parseInt(result.v.toString(), 10) - 27;
+              vHex = v.toString(16);
+
+              if (vHex.length < 2) {
+                vHex = "0" + v;
+              }
+
+              return _context3.abrupt("return", "0x" + result.r + result.s + vHex);
+
+            case 15:
+              _context3.prev = 15;
+              _context3.next = 18;
+              return transport.close();
+
+            case 18:
+              return _context3.finish(15);
+
+            case 19:
+            case "end":
+              return _context3.stop();
+          }
+        }
+      }, _callee3, this, [[6,, 15, 19]]);
+    }));
+
+    function signPersonalMessageAsync(_x4, _x5) {
+      return _signPersonalMessageAsync.apply(this, arguments);
+    }
+
+    return signPersonalMessageAsync;
+  }()
+  /**
+   * eth_signTypedData is currently not supported on Ledger devices.
+   * @return Signature hex string (order: rsv)
+   */
+  ;
+
+  _proto.signTypedDataAsync =
+  /*#__PURE__*/
+  function () {
+    var _signTypedDataAsync = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/runtimeModule.mark(function _callee4() {
+      return runtimeModule.wrap(function _callee4$(_context4) {
+        while (1) {
+          switch (_context4.prev = _context4.next) {
+            case 0:
+              throw new Error(types.WalletSubproviderErrors.MethodNotSupported);
+
+            case 1:
+            case "end":
+              return _context4.stop();
+          }
+        }
+      }, _callee4);
+    }));
+
+    function signTypedDataAsync() {
+      return _signTypedDataAsync.apply(this, arguments);
+    }
+
+    return signTypedDataAsync;
+  }();
+
+  return LedgerSubprovider;
+}(base_wallet_subprovider.BaseWalletSubprovider);
+
 var LedgerConnector = /*#__PURE__*/function (_AbstractConnector) {
   _inheritsLoose(LedgerConnector, _AbstractConnector);
 
@@ -864,7 +1226,7 @@ var LedgerConnector = /*#__PURE__*/function (_AbstractConnector) {
                 engine = new Web3ProviderEngine({
                   pollingInterval: this.pollingInterval
                 });
-                engine.addProvider(new subprovider.LedgerSubprovider({
+                engine.addProvider(new LedgerSubprovider({
                   networkId: this.chainId,
                   baseDerivationPath: this.baseDerivationPath
                 }));
