@@ -67,7 +67,24 @@ export class LedgerConnector extends AbstractConnector {
   }
 
   public async getAccount(): Promise<null> {
-    return (await this.provider._providers[0].getAccountsAsync(1))[0]
+    return (await this.provider._providers[0].getAccountsAsync(1, this.getAccountIndex()))[0]
+  }
+
+  public async getAccounts(page: number = 1): Promise<string[]> {
+    const perPage = 5
+    return (await this.provider._providers[0].getAccountsAsync(perPage, (page-1)*perPage))
+  }
+
+  public getAccountIndex(): number {
+    const provider: LedgerSubprovider = this.provider._providers[0]
+    return provider.selectedAccountIndex
+  }
+
+  public async setAccountIndex(index: number): Promise<string> {
+    this.provider._providers[0].selectedAccountIndex = index
+    const address = (await this.provider._providers[0].getAccountsAsync(1, index))[0]
+    this.emitUpdate({account:address})
+    return address
   }
 
   public deactivate() {

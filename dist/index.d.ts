@@ -21,6 +21,9 @@ export declare class LedgerConnector extends AbstractConnector {
     getProvider(): Promise<Web3ProviderEngine>;
     getChainId(): Promise<number>;
     getAccount(): Promise<null>;
+    getAccounts(page?: number): Promise<string[]>;
+    getAccountIndex(): number;
+    setAccountIndex(index: number): Promise<string>;
     deactivate(): void;
 }
 export {};

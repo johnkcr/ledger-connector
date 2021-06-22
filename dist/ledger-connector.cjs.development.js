@@ -1309,7 +1309,7 @@ var LedgerConnector = /*#__PURE__*/function (_AbstractConnector) {
           switch (_context4.prev = _context4.next) {
             case 0:
               _context4.next = 2;
-              return this.provider._providers[0].getAccountsAsync(1);
+              return this.provider._providers[0].getAccountsAsync(1, this.getAccountIndex());
 
             case 2:
               return _context4.abrupt("return", _context4.sent[0]);
@@ -1327,6 +1327,77 @@ var LedgerConnector = /*#__PURE__*/function (_AbstractConnector) {
     }
 
     return getAccount;
+  }();
+
+  _proto.getAccounts = /*#__PURE__*/function () {
+    var _getAccounts = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/runtimeModule.mark(function _callee5(page) {
+      var perPage;
+      return runtimeModule.wrap(function _callee5$(_context5) {
+        while (1) {
+          switch (_context5.prev = _context5.next) {
+            case 0:
+              if (page === void 0) {
+                page = 1;
+              }
+
+              perPage = 5;
+              _context5.next = 4;
+              return this.provider._providers[0].getAccountsAsync(perPage, (page - 1) * perPage);
+
+            case 4:
+              return _context5.abrupt("return", _context5.sent);
+
+            case 5:
+            case "end":
+              return _context5.stop();
+          }
+        }
+      }, _callee5, this);
+    }));
+
+    function getAccounts(_x) {
+      return _getAccounts.apply(this, arguments);
+    }
+
+    return getAccounts;
+  }();
+
+  _proto.getAccountIndex = function getAccountIndex() {
+    var provider = this.provider._providers[0];
+    return provider.selectedAccountIndex;
+  };
+
+  _proto.setAccountIndex = /*#__PURE__*/function () {
+    var _setAccountIndex = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/runtimeModule.mark(function _callee6(index) {
+      var address;
+      return runtimeModule.wrap(function _callee6$(_context6) {
+        while (1) {
+          switch (_context6.prev = _context6.next) {
+            case 0:
+              this.provider._providers[0].selectedAccountIndex = index;
+              _context6.next = 3;
+              return this.provider._providers[0].getAccountsAsync(1, index);
+
+            case 3:
+              address = _context6.sent[0];
+              this.emitUpdate({
+                account: address
+              });
+              return _context6.abrupt("return", address);
+
+            case 6:
+            case "end":
+              return _context6.stop();
+          }
+        }
+      }, _callee6, this);
+    }));
+
+    function setAccountIndex(_x2) {
+      return _setAccountIndex.apply(this, arguments);
+    }
+
+    return setAccountIndex;
   }();
 
   _proto.deactivate = function deactivate() {
