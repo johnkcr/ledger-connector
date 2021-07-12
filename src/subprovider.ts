@@ -81,7 +81,7 @@ export class LedgerSubprovider extends BaseWalletSubprovider {
         addresses.push(info.address)
       }
     } catch (e) {
-      console.log(e)
+      throw e;
     } finally {
       await transport.close()
     }

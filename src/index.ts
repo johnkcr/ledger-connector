@@ -19,7 +19,7 @@ export class LedgerConnector extends AbstractConnector {
   private readonly url: string
   private readonly pollingInterval?: number
   private readonly requestTimeoutMs?: number
-  private readonly baseDerivationPath?: string
+  private baseDerivationPath?: string
 
   private provider: any
 
@@ -39,7 +39,11 @@ export class LedgerConnector extends AbstractConnector {
     this.baseDerivationPath = baseDerivationPath
   }
 
-  public async activate(): Promise<ConnectorUpdate> {
+  public async activate(baseDerivationPath?: string): Promise<ConnectorUpdate> {
+    if(baseDerivationPath) {
+      this.baseDerivationPath = baseDerivationPath
+    }
+
     if (!this.provider) {
       const engine = new Web3ProviderEngine({ pollingInterval: this.pollingInterval })
       engine.addProvider(
