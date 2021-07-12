@@ -956,7 +956,7 @@ var LedgerSubprovider = /*#__PURE__*/function (_BaseWalletSubprovide) {
             case 20:
               _context.prev = 20;
               _context.t0 = _context["catch"](6);
-              console.log(_context.t0);
+              throw _context.t0;
 
             case 23:
               _context.prev = 23;
@@ -1216,12 +1216,16 @@ var LedgerConnector = /*#__PURE__*/function (_AbstractConnector) {
   var _proto = LedgerConnector.prototype;
 
   _proto.activate = /*#__PURE__*/function () {
-    var _activate = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/runtimeModule.mark(function _callee() {
+    var _activate = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/runtimeModule.mark(function _callee(baseDerivationPath) {
       var engine;
       return runtimeModule.wrap(function _callee$(_context) {
         while (1) {
           switch (_context.prev = _context.next) {
             case 0:
+              if (baseDerivationPath) {
+                this.baseDerivationPath = baseDerivationPath;
+              }
+
               if (!this.provider) {
                 engine = new Web3ProviderEngine({
                   pollingInterval: this.pollingInterval
@@ -1241,7 +1245,7 @@ var LedgerConnector = /*#__PURE__*/function (_AbstractConnector) {
                 chainId: this.chainId
               });
 
-            case 3:
+            case 4:
             case "end":
               return _context.stop();
           }
@@ -1249,7 +1253,7 @@ var LedgerConnector = /*#__PURE__*/function (_AbstractConnector) {
       }, _callee, this);
     }));
 
-    function activate() {
+    function activate(_x) {
       return _activate.apply(this, arguments);
     }
 
@@ -1355,7 +1359,7 @@ var LedgerConnector = /*#__PURE__*/function (_AbstractConnector) {
       }, _callee5, this);
     }));
 
-    function getAccounts(_x) {
+    function getAccounts(_x2) {
       return _getAccounts.apply(this, arguments);
     }
 
@@ -1393,7 +1397,7 @@ var LedgerConnector = /*#__PURE__*/function (_AbstractConnector) {
       }, _callee6, this);
     }));
 
-    function setAccountIndex(_x2) {
+    function setAccountIndex(_x3) {
       return _setAccountIndex.apply(this, arguments);
     }
 

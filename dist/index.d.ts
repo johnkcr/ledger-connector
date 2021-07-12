@@ -14,10 +14,10 @@ export declare class LedgerConnector extends AbstractConnector {
     private readonly url;
     private readonly pollingInterval?;
     private readonly requestTimeoutMs?;
-    private readonly baseDerivationPath?;
+    private baseDerivationPath?;
     private provider;
     constructor({ chainId, url, pollingInterval, requestTimeoutMs, baseDerivationPath }: LedgerConnectorArguments);
-    activate(): Promise<ConnectorUpdate>;
+    activate(baseDerivationPath?: string): Promise<ConnectorUpdate>;
     getProvider(): Promise<Web3ProviderEngine>;
     getChainId(): Promise<number>;
     getAccount(): Promise<null>;
